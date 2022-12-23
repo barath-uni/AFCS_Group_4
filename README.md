@@ -8,3 +8,7 @@
 | -  | -        |
 
 ### Put things here for R based files
+| Model Name      | File Name  |
+| ----------- | ----------- |
+| Moving Average      | moving_avg.R       |
+| -  | -        |
