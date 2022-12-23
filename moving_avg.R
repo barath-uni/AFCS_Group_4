@@ -49,28 +49,30 @@ for(num in c(1:823)){
   # forecast model could be changed to wanted model
   model <- arima(observ, order=c(0,0,1))
   fcast <- forecast(model, h=h)
-  # This thing does not autoplot when run within a loop, print() to see the values
   autoplot(fcast)
+  
   # create wanted output format
   row <- as.numeric(t(data.frame(fcast))[1,])
   new_row <- c(sample[num,1], row)
   sample[num,] <- new_row
 }
 
-rmsefinal = c()
-maefinal = c()
-smapefinal = c()
+rmse_total = c()
+MAE_total = c()
+smape_total = c()
 for(num in c(1:823)){
   o = as.list(as.data.frame(t(validation[num,2:29])))
   m = as.list(as.data.frame(as.numeric(t(sample[num,2:29]))))
   o <- as.numeric(as.character(unlist(o[[1]])))
   m <- as.numeric(as.character(unlist(m[[1]])))
   print(rmse(m,o))
-  rmsefinal <- c(rmsefinal, rmse(m,o))
-  print(rmsefinal)
-  maefinal <- c(maefinal, mae(m,o))
-  smapefinal <- c(smapefinal, smape(m,o))
+  rmse_total <- c(rmse_total, rmse(m,o))
+  print(rmse_total)
+  MAE_total <- c(MAE_total, mae(m,o))
+  smape_total <- c(smape_total, smape(m,o))
 }
-mean(rmsefinal)
-mean(maefinal)
-mean(smapefinal)
+mean(rmse_total)
+mean(MAE_total)
+mean(smape_total)
+
+write.csv(sample, ".moving_avg1.csv", row.names = F)
