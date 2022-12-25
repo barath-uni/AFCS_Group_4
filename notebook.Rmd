@@ -1,0 +1,127 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(fpp2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(zoo)
+library(Metrics)
+library(prophet)
+library(cowplot)
+# move to data directory for loading the data
+setwd("/home/barath/codespace/afcs_proj/AFCS_Group_4/data")
+# read in all the data
+calendar <- read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/data/calendar_afcs2022.csv")
+sales_train <- read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/data/sales_train_validation_afcs2022.csv")
+
+price <- data.frame(read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/data/sell_prices_afcs2022.csv"))
+sample_org <- data.frame(read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/data/sample_submission_afcs2022.csv"))
+# extra_data
+total <- data.frame(read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/data/sales_test_validation_afcs2022.csv"))
+print(total)
+# move back to original working directory
+setwd("..")
+validation <- total[,c(0:29)]
+# set forecast days
+h=28
+```
+
+```{}
+```
+
+```{r, HOLD =TRUE, echo = FALSE, results = 'hide', message = FALSE}
+setwd("/home/barath/codespace/afcs_proj/AFCS_Group_4/output")
+ar1 <- read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/output/auto_regressive1.csv")
+#ar4 <- read_csv("auto_regressive_4_R.csv")
+ma1 <- read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/output/moving_avg1.csv")
+#ma4 <- read_csv("moving_average_4_R.csv")
+snaive <- read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/output/snaive.csv")
+lm <- read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/output/linear_model_out.csv")
+aa <- read_csv("/home/barath/codespace/afcs_proj/AFCS_Group_4/output/auto_arima.csv")
+#prop <- read_csv("prophet_r.csv")
+#prophol <- read_csv("prophet_r_hol.csv")
+setwd("..")  
+num = 7 
+val <- ts(as.data.frame(t(validation[num,])), start = c(2016, 116), frequency = 365.25)
+ar1 <- ts(as.data.frame(t(ar1[num,2:29])), start = c(2016, 116), frequency = 365.25)
+#ar4 <- ts(as.data.frame(t(ar4[num,2:29])), start = c(2016, 116), frequency = 365.25)
+ma1 <- ts(as.data.frame(t(ma1[num,2:29])), start = c(2016, 116), frequency = 365.25)
+#ma4 <- ts(as.data.frame(t(ma4[num,2:29])), start = c(2016, 116), frequency = 365.25)
+snaive <- ts(as.data.frame(t(snaive[num,2:29])), start = c(2016, 116), frequency = 365.25)
+lm <- ts(as.data.frame(t(lm[num,2:29])), start = c(2016, 116), frequency = 365.25)
+aa <- ts(as.data.frame(t(aa[num,2:29])), start = c(2016, 116), frequency = 365.25)
+#prop <- ts(as.data.frame(t(prop[num,2:29])), start = c(2016, 116), frequency = 365.25)
+#prophol <- ts(as.data.frame(t(prophol[num,2:29])), start = c(2016, 116), frequency = 365.25)
+```
+
+```{r}
+options(repr.plot.width=20, repr.plot.height=10)
+```
+
+```{r}
+autoplot(val) + 
+  autolayer(ar1, series = "auto regressive with order 1") + 
+  # autolayer(ar4, series = "auto regressive with order 4") + 
+  autolayer(ma1, series = "moving average with order 1") + 
+  #autolayer(ma4, series = "moving average with order 4") +
+  autolayer(snaive, series = "snaive") + 
+  autolayer(lm, series = "linear model") + 
+  autolayer(aa, series = "auto arima") + 
+  #autolayer(prop, series = "Prophet ") + 
+  # autolayer(prophol, series = "Prophet with events and snap as predictors") + 
+  ggtitle("The prediction of the sales per day for each model on the validation data") + 
+  ylab("sales per day") + xlab("time in days") +
+  theme(legend.position="bottom")
+```
+
+```{r}
+sales_train <- total
+# set sample for the output
+sample <- sample_org
+# select from train file only the selected row
+s_train <- t(sales_train[num,])
+name <- substr(as.character(s_train[1,]), start = 1, stop = 11)
+s_train <- data.frame(s_train[-1,])
+colnames(s_train) = "sales" #name
+# select all the wanted columns for the forecast
+train <- select(s_train, sales)
+train <- ts(train, start=c(2011,29), frequency = 365)
+# forecast model could be changed to wanted model
+model <- auto.arima(train)
+model_2 <- arima(train, order=c(0,0,4))
+fcast <- forecast(model, h=h)
+autoplot(fcast)
+fcast2 <- forecast(model_2, h=h)
+autoplot(fcast2)
+```
+
+```{r}
+png("ma4_final_smaller",10,5, units="cm", res=1200)
+autoplot(fcast, series = "moving average forecast (4)") + coord_cartesian(xlim = c(2016.0,2016.4))
+dev.off()
+```
+
+```{r}
+
+time_series <- as.data.frame(t(sales_train[822,]))
+print(time_series)
+time_series <- ts(time_series[[1]], start = c(2011,29), frequency = 365.25)
+stl_decomposition <- mstl(time_series, s.window = 13)
+autoplot(stl_decomposition)
+png("mstl_decomposition_product_7.png",30,15, units="cm", res=1200)
+autoplot(stl_decomposition)
+dev.off()
+```
+
+```{r}
+time_series <- as.data.frame(t(total[822,2:29]))
+print(time_series[[1]])
+time_series <- ts(time_series[[1]])
+print(time_series)
+stl_decomposition <- mstl(time_series)
+autoplot(stl_decomposition) + labs(title="Decomposition of FOODS_3_827_TX_3_validation from Test Set")
+```
